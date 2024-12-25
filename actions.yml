@@ -9,11 +9,12 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
     - name: Checkout master branch
       uses: actions/checkout@v4
       with:
+        fetch-depth: 2
         ref: master
 
     - name: Create SSH key
@@ -31,54 +32,58 @@ jobs:
       id: check_changes
       run: |
         if [ -z "${{ github.event.before }}" ]; then
-          echo "No previous SHA found. Skipping change check."
-          echo "files_changed=true" >> $GITHUB_OUTPUT  # Always deploy if it's the first commit
+          echo "First deployment - no previous commit to compare"
+          echo "files_changed=true" >> $GITHUB_OUTPUT
         else
-          echo "Previous SHA found: ${{ github.event.before }}"
-          echo "Current SHA: ${{ github.sha }}"
-
-          # Check if requirements.txt or Dockerfile has changed between the two commits
           if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE 'requirements.txt|Dockerfile'; then
+            echo "Requirements or Dockerfile changed - rebuilding image"
             echo "files_changed=true" >> $GITHUB_OUTPUT
           else
+            echo "No changes detected in requirements.txt or Dockerfile - skipping rebuild"
             echo "files_changed=false" >> $GITHUB_OUTPUT
           fi
         fi
 
     - name: Deploy to Server
       env:
-        # SSH_HOST: ${{ secrets.SERVER_HOST }}
-        # SSH_USER: ${{ secrets.SERVER_USERNAME }}
         COMMIT_HASH: ${{ env.commit_hash }}
       run: |
+        log() {
+          echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+        }
+        
         ssh -i ~/.ssh/test_keys -o StrictHostKeyChecking=no ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} << EOF
           cd /home/ntkyc/workspace/flask-app-test
-
+          
           # Pull latest changes
           git checkout master
           git pull origin master
-       
+          
           if [ "${{ steps.check_changes.outputs.files_changed }}" == "true" ]; then
-            # Build and tag the new image with the commit hash
+            echo "Building new Docker image..."
+            # Build and tag the new image
             docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
-            docker tag my-test-image my-test-image:$COMMIT_HASH
+            # docker tag my-test-image my-test-image:$COMMIT_HASH
+            
+            # First, stop the running containers
+            echo "Stopping containers..."
+            docker-compose down
+            
+            # Clean up old images more safely
+            echo "Cleaning up old images..."
 
-            # Remove the old image (excluding images used by running containers)
-            containers_using_image=$(docker ps -q --filter "ancestor=my-test-image")
-            if [ ! -z "$containers_using_image" ]; then
-              echo "Stopping containers using the image: $containers_using_image"
-              docker stop $containers_using_image
-            fi
-
-            OLD_IMAGES=$(docker images my-test-image --format "{{.ID}}" | grep -v $(docker images my-test-image --filter "label=com.docker.compose.project=my-test-image" --format "{{.ID}}"))
-            if [ ! -z "$OLD_IMAGES" ]; then
-              echo "Removing old images: $OLD_IMAGES"
-              docker rmi -f $OLD_IMAGES
-            else
-              echo "No old images to remove."
-            fi
+            # List all images except the most recent [only one image is retained], force remove them
+            docker images my-test-image --format "{{.ID}}" | tail -n +1 | while read -r id; do
+              docker rmi -f \$id || true
+            done
+          else
+            # If no rebuild needed, just restart the containers
+            echo "Stopping containers..."
+            docker-compose down
           fi
-          # Restart the services with the new image
-          docker-compose down
+          
+          # Start the new containers
+          echo "Starting new containers..."
           docker-compose up -d
-        EOF
+          
+         
