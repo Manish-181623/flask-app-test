@@ -32,11 +32,14 @@ jobs:
       id: check_changes
       run: |
         if [ -z "${{ github.event.before }}" ]; then
+          echo "First deployment - no previous commit to compare"
           echo "files_changed=true" >> $GITHUB_OUTPUT
         else
           if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE 'requirements.txt|Dockerfile'; then
+            echo "Requirements or Dockerfile changed - rebuilding image"
             echo "files_changed=true" >> $GITHUB_OUTPUT
           else
+            echo "No changes detected in requirements.txt or Dockerfile - skipping rebuild"
             echo "files_changed=false" >> $GITHUB_OUTPUT
           fi
         fi
@@ -68,7 +71,8 @@ jobs:
             
             # Clean up old images more safely
             echo "Cleaning up old images..."
-            # List all images except the most recent , force remove them
+
+            # List all images except the most recent [only one image is retained], force remove them
             docker images my-test-image --format "{{.ID}}" | tail -n +1 | while read -r id; do
               docker rmi -f \$id || true
             done
