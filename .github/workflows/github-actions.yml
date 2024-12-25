@@ -24,9 +24,9 @@ jobs:
         chmod 600 ~/.ssh/test_keys
         ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Get Commit Hash
-      id: get_commit_hash
-      run: echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+    # - name: Get Commit Hash
+    #   id: get_commit_hash
+    #   run: echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
     - name: Check if requirements or Dockerfile changed
       id: check_changes
@@ -62,7 +62,8 @@ jobs:
           if [ "${{ steps.check_changes.outputs.files_changed }}" == "true" ]; then
             echo "Building new Docker image..."
             # Build and tag the new image
-            docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
+            docker-compose build app
+            # docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
             # docker tag my-test-image my-test-image:$COMMIT_HASH
             
             # First, stop the running containers
