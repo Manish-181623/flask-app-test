@@ -1,0 +1,82 @@
+name: Deploy Particle Hunter Backend
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout master branch
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+        ref: master
+
+    - name: Create SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SERVER_SSH_PRIVATE_KEY }}" > ~/.ssh/test_keys
+        chmod 600 ~/.ssh/test_keys
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
+    - name: Get Commit Hash
+      id: get_commit_hash
+      run: echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+    - name: Check if requirements or Dockerfile changed
+      id: check_changes
+      run: |
+        if [ -z "${{ github.event.before }}" ]; then
+          echo "files_changed=true" >> $GITHUB_OUTPUT
+        else
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE 'requirements.txt|Dockerfile'; then
+            echo "files_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "files_changed=false" >> $GITHUB_OUTPUT
+          fi
+        fi
+
+    - name: Deploy to Server
+      env:
+        COMMIT_HASH: ${{ env.commit_hash }}
+      run: |
+        # Basic logging function
+        log() {
+          echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+        }
+        
+        ssh -i ~/.ssh/test_keys -o StrictHostKeyChecking=no ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} << EOF
+          cd /home/ntkyc/workspace/flask-app-test
+          
+          # Pull latest changes
+          git checkout master
+          git pull origin master
+          
+          if [ "${{ steps.check_changes.outputs.files_changed }}" == "true" ]; then
+            log "Building new Docker image..."
+            # Build and tag the new image
+            docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
+            docker tag my-test-image my-test-image:$COMMIT_HASH
+            
+            # Stop and remove old containers
+            running_containers=\$(docker ps -q --filter "ancestor=my-test-image")
+            if [ ! -z "\$running_containers" ]; then
+              docker stop \$running_containers
+            fi
+            
+            # Keep only recent images (last 2 versions)
+            docker images my-test-image --format "{{.ID}}" | tail -n +1 | xargs -r docker rmi
+          fi
+          
+          # Restart services
+          docker-compose down
+          docker-compose up -d
+          
+         
+
+
