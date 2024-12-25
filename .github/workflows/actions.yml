@@ -57,21 +57,27 @@ jobs:
           # Pull latest changes
           git checkout master
           git pull origin master
+       
+          if [ "${{ steps.check_changes.outputs.files_changed }}" == "true" ]; then
+            # Build and tag the new image with the commit hash
+            docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
+            docker tag my-test-image my-test-image:$COMMIT_HASH
 
-          # Build and tag the new image with the commit hash
-          docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
-          docker tag my-test-image my-test-image:$COMMIT_HASH
+            # Remove the old image (excluding images used by running containers)
+            containers_using_image=$(docker ps -q --filter "ancestor=my-test-image")
+            if [ ! -z "$containers_using_image" ]; then
+              echo "Stopping containers using the image: $containers_using_image"
+              docker stop $containers_using_image
+            fi
 
-          # Remove the old image (excluding images used by running containers)
-          OLD_IMAGES=$(docker images my-test-image --format "{{.ID}}" | grep -v $(docker images my-test-image --filter "label=com.docker.compose.project=my-test-image" --format "{{.ID}}"))
-
-          if [ ! -z "$OLD_IMAGES" ]; then
-            echo "Removing old images: $OLD_IMAGES"
-            docker rmi -f $OLD_IMAGES
-          else
-            echo "No old images to remove."
+            OLD_IMAGES=$(docker images my-test-image --format "{{.ID}}" | grep -v $(docker images my-test-image --filter "label=com.docker.compose.project=my-test-image" --format "{{.ID}}"))
+            if [ ! -z "$OLD_IMAGES" ]; then
+              echo "Removing old images: $OLD_IMAGES"
+              docker rmi -f $OLD_IMAGES
+            else
+              echo "No old images to remove."
+            fi
           fi
-
           # Restart the services with the new image
           docker-compose down
           docker-compose up -d
