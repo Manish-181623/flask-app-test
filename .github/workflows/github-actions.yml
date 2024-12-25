@@ -57,24 +57,24 @@ jobs:
           git pull origin master
           
           if [ "${{ steps.check_changes.outputs.files_changed }}" == "true" ]; then
-            log "Building new Docker image..."
+            echo "Building new Docker image..."
             # Build and tag the new image
             docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
             # docker tag my-test-image my-test-image:$COMMIT_HASH
             
             # First, stop the running containers
-            log "Stopping containers..."
+            echo "Stopping containers..."
             docker-compose down
             
             # Clean up old images more safely
-            log "Cleaning up old images..."
+            echo "Cleaning up old images..."
             # List all images except the most recent , force remove them
             docker images my-test-image --format "{{.ID}}" | tail -n +1 | while read -r id; do
               docker rmi -f \$id || true
             done
           else
             # If no rebuild needed, just restart the containers
-            log "Stopping containers..."
+            echo "Stopping containers..."
             docker-compose down
           fi
           
