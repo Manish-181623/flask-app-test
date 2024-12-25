@@ -61,21 +61,16 @@ jobs:
           
           if [ "${{ steps.check_changes.outputs.files_changed }}" == "true" ]; then
             echo "Building new Docker image..."
-            # Build and tag the new image
-            docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
-            # docker tag my-test-image my-test-image:$COMMIT_HASH
             
-            # First, stop the running containers
-            echo "Stopping containers..."
+            # Stop running containers
             docker-compose down
             
-            # Clean up old images more safely
-            echo "Cleaning up old images..."
-
-            # List all images except the most recent [only one image is retained], force remove them
-            docker images my-test-image --format "{{.ID}}" | tail -n +2 | while read -r id; do
-              docker rmi -f \$id || true
-            done
+            # Remove old images before building new one
+            docker images my-test-image -q | xargs -r docker rmi -f
+            docker images --filter "dangling=true" -q | xargs -r docker rmi -f
+            
+            # Build new image
+            docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
           else
             # If no rebuild needed, just restart the containers
             echo "Stopping containers..."
@@ -86,4 +81,5 @@ jobs:
           echo "Starting new containers..."
           docker-compose up -d
           
-         
+
+        EOF
