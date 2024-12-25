@@ -32,8 +32,12 @@ jobs:
       run: |
         if [ -z "${{ github.event.before }}" ]; then
           echo "No previous SHA found. Skipping change check."
-          echo "files_changed=true" >> $GITHUB_OUTPUT
+          echo "files_changed=true" >> $GITHUB_OUTPUT  # Always deploy if it's the first commit
         else
+          echo "Previous SHA found: ${{ github.event.before }}"
+          echo "Current SHA: ${{ github.sha }}"
+
+          # Check if requirements.txt or Dockerfile has changed between the two commits
           if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE 'requirements.txt|Dockerfile'; then
             echo "files_changed=true" >> $GITHUB_OUTPUT
           else
