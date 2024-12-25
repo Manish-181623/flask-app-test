@@ -45,7 +45,7 @@ jobs:
         SSH_USER: ${{ secrets.SERVER_USERNAME }}
         COMMIT_HASH: ${{ env.commit_hash }}
       run: |
-        ssh $SSH_USER@$SSH_HOST << EOF
+        ssh ${{ secrets.SERVER_HOST }@${{ secrets.SERVER_USERNAME }} << EOF
           cd /home/ntkyc/workspace/flask-app-test
 
           # Pull latest changes
