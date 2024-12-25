@@ -41,11 +41,11 @@ jobs:
 
     - name: Deploy to Server
       env:
-        SSH_HOST: ${{ secrets.SERVER_HOST }}
-        SSH_USER: ${{ secrets.SERVER_USERNAME }}
+        # SSH_HOST: ${{ secrets.SERVER_HOST }}
+        # SSH_USER: ${{ secrets.SERVER_USERNAME }}
         COMMIT_HASH: ${{ env.commit_hash }}
       run: |
-        ssh ${{ secrets.SERVER_HOST }@${{ secrets.SERVER_USERNAME }} << EOF
+        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
           cd /home/ntkyc/workspace/flask-app-test
 
           # Pull latest changes
