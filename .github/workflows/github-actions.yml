@@ -60,7 +60,7 @@ jobs:
             log "Building new Docker image..."
             # Build and tag the new image
             docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
-            docker tag my-test-image my-test-image:$COMMIT_HASH
+            # docker tag my-test-image my-test-image:$COMMIT_HASH
             
             # First, stop the running containers
             log "Stopping containers..."
@@ -68,7 +68,7 @@ jobs:
             
             # Clean up old images more safely
             log "Cleaning up old images..."
-            # List all images except the most recent 2, force remove them
+            # List all images except the most recent , force remove them
             docker images my-test-image --format "{{.ID}}" | tail -n +1 | while read -r id; do
               docker rmi -f \$id || true
             done
