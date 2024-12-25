@@ -1,11 +1,9 @@
-# .github/workflows/deploy.yml
 name: Deploy Particle Hunter Backend
 
 on:
   push:
     branches:
       - master
-      - main
   workflow_dispatch:
 
 jobs:
@@ -13,24 +11,23 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout repository
+    - name: Checkout master branch
       uses: actions/checkout@v4
       with:
         fetch-depth: 2
-        # Dynamic ref based on the triggering branch
-        ref: ${{ github.ref_name }}
-    
+        ref: master
+
     - name: Create SSH key
       run: |
         mkdir -p ~/.ssh
         echo "${{ secrets.SERVER_SSH_PRIVATE_KEY }}" > ~/.ssh/test_keys
         chmod 600 ~/.ssh/test_keys
         ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
-    
+
     - name: Get Commit Hash
       id: get_commit_hash
       run: echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-    
+
     - name: Check if requirements or Dockerfile changed
       id: check_changes
       run: |
@@ -46,11 +43,10 @@ jobs:
             echo "files_changed=false" >> $GITHUB_OUTPUT
           fi
         fi
-    
+
     - name: Deploy to Server
       env:
         COMMIT_HASH: ${{ env.commit_hash }}
-        BRANCH_NAME: ${{ github.ref_name }}
       run: |
         log() {
           echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
@@ -59,26 +55,25 @@ jobs:
         ssh -i ~/.ssh/test_keys -o StrictHostKeyChecking=no ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} << EOF
           cd /home/ntkyc/workspace/flask-app-test
           
-          # Switch to the appropriate branch and pull changes
-          git fetch origin
-          git checkout $BRANCH_NAME
-          git pull origin $BRANCH_NAME
-          
-          # Use a common image name regardless of branch
-          export COMPOSE_PROJECT_NAME=particle-hunter
+          # Pull latest changes
+          git checkout master
+          git pull origin master
           
           if [ "${{ steps.check_changes.outputs.files_changed }}" == "true" ]; then
             echo "Building new Docker image..."
-            # Build image with common tag
+            # Build and tag the new image
             docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
+            # docker tag my-test-image my-test-image:$COMMIT_HASH
             
-            # Stop running containers
+            # First, stop the running containers
             echo "Stopping containers..."
             docker-compose down
             
-            # Clean up old images, keeping the most recent one
+            # Clean up old images more safely
             echo "Cleaning up old images..."
-            docker images my-test-image --format "{{.ID}}" | tail -n +2 | while read -r id; do
+
+            # List all images except the most recent [only one image is retained], force remove them
+            docker images my-test-image --format "{{.ID}}" | tail -n +1 | while read -r id; do
               docker rmi -f \$id || true
             done
           else
@@ -87,7 +82,8 @@ jobs:
             docker-compose down
           fi
           
-          # Start containers using the appropriate compose file
+          # Start the new containers
           echo "Starting new containers..."
           docker-compose up -d
-        EOF
+          
+         
