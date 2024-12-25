@@ -45,7 +45,6 @@ jobs:
       env:
         COMMIT_HASH: ${{ env.commit_hash }}
       run: |
-        # Basic logging function
         log() {
           echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
         }
@@ -63,20 +62,24 @@ jobs:
             docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
             docker tag my-test-image my-test-image:$COMMIT_HASH
             
-            # Stop and remove old containers
-            running_containers=\$(docker ps -q --filter "ancestor=my-test-image")
-            if [ ! -z "\$running_containers" ]; then
-              docker stop \$running_containers
-            fi
+            # First, stop the running containers
+            log "Stopping containers..."
+            docker-compose down
             
-            # Keep only recent images (last 2 versions)
-            docker images my-test-image --format "{{.ID}}" | tail -n +1 | xargs -r docker rmi
+            # Clean up old images more safely
+            log "Cleaning up old images..."
+            # List all images except the most recent 2, force remove them
+            docker images my-test-image --format "{{.ID}}" | tail -n +3 | while read -r id; do
+              docker rmi -f \$id || true
+            done
+          else
+            # If no rebuild needed, just restart the containers
+            log "Stopping containers..."
+            docker-compose down
           fi
           
-          # Restart services
-          docker-compose down
+          # Start the new containers
+          log "Starting new containers..."
           docker-compose up -d
           
          
-
-
