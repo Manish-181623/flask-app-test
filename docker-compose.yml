@@ -1,0 +1,9 @@
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "5555:5555"
+    volumes:
+      - .:/app  # Maps the current directory to /app in the container
+    command: python app.py  # Runs the application

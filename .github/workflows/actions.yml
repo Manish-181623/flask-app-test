@@ -1,0 +1,69 @@
+name: Deploy Particle Hunter Backend
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout master branch
+      uses: actions/checkout@v4
+      with:
+        ref: master
+
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.8.0
+      with:
+        ssh-private-key: ${{ secrets.SERVER_SSH_PRIVATE_KEY }}
+
+    - name: Get Commit Hash
+      id: get_commit_hash
+      run: echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+    - name: Check if requirements or Dockerfile changed
+      id: check_changes
+      run: |
+        if [ -z "${{ github.event.before }}" ]; then
+          echo "No previous SHA found. Skipping change check."
+          echo "files_changed=true" >> $GITHUB_OUTPUT
+        else
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -qE 'requirements.txt|Dockerfile'; then
+            echo "files_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "files_changed=false" >> $GITHUB_OUTPUT
+          fi
+        fi
+
+    - name: Deploy to Server
+      if: steps.check_changes.outputs.files_changed == 'true'
+      env:
+        SSH_HOST: ${{ secrets.SERVER_HOST }}
+        SSH_USER: ${{ secrets.SERVER_USERNAME }}
+        COMMIT_HASH: ${{ env.commit_hash }}
+      run: |
+        ssh $SSH_USER@$SSH_HOST << EOF
+          cd /home/ntkyc/workspace/flask-app-test
+
+          # Pull latest changes
+          git checkout master
+          git pull origin master
+
+          # Build and tag the new image with the commit hash
+          docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH prod-khojai-backend
+          docker tag khojai-ir-backend-img khojai-ir-backend-img:$COMMIT_HASH
+
+          # Remove the old image (excluding images used by running containers)
+          OLD_IMAGE=$(docker images khojai-ir-backend-img --format "{{.ID}}" | tail -n +2)
+          if [ ! -z "$OLD_IMAGE" ]; then
+            docker rmi -f $OLD_IMAGE
+          fi
+
+          # Restart the services with the new image
+          docker-compose down
+          docker-compose up -d
+        EOF
