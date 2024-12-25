@@ -59,7 +59,7 @@ jobs:
           docker tag my-test-image my-test-image:$COMMIT_HASH
 
           # Remove the old image (excluding images used by running containers)
-          OLD_IMAGE=$(docker images khojai-ir-backend-img --format "{{.ID}}" | tail -n +2)
+          OLD_IMAGE=$(docker images my-test-image --format "{{.ID}}" | tail -n +2)
           if [ ! -z "$OLD_IMAGE" ]; then
             docker rmi -f $OLD_IMAGE
           fi
