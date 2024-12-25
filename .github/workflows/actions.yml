@@ -16,10 +16,12 @@ jobs:
       with:
         ref: master
 
-    - name: Set up SSH
-      uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: ${{ secrets.SERVER_SSH_PRIVATE_KEY }}
+    - name: Create SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SERVER_SSH_PRIVATE_KEY }}" > ~/.ssh/test_keys
+        chmod 600 ~/.ssh/test_keys
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
     - name: Get Commit Hash
       id: get_commit_hash
@@ -45,7 +47,7 @@ jobs:
         # SSH_USER: ${{ secrets.SERVER_USERNAME }}
         COMMIT_HASH: ${{ env.commit_hash }}
       run: |
-        ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << EOF
+        ssh -i ~/.ssh/test_keys -o StrictHostKeyChecking=no $SERVER_USENAME@$SERVER_HOST << EOF
           cd /home/ntkyc/workspace/flask-app-test
 
           # Pull latest changes
