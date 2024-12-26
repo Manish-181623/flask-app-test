@@ -62,8 +62,8 @@ jobs:
             docker-compose down
             
             # Remove old images before building new one
-            docker images my-test-image -q | xargs -r docker rmi -f
-            docker images --filter "dangling=true" -q | xargs -r docker rmi -f
+            # docker images my-test-image -q | xargs -r docker rmi -f
+            # docker images --filter "dangling=true" -q | xargs -r docker rmi -f
             
             # Build new image
             # docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
