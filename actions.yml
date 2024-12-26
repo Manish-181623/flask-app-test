@@ -73,8 +73,8 @@ jobs:
             # Clean up old images more safely
             echo "Cleaning up old images..."
 
-            # List all images except the most recent [only one image is retained], force remove them
-            docker images my-test-image --format "{{.ID}}" | tail -n +1 | while read -r id; do
+            # List all images except the most recent [only two image is retained], force remove them
+            docker images my-test-image --format "{{.ID}}" | tail -n +3 | while read -r id; do
               docker rmi -f \$id || true
             done
           else
