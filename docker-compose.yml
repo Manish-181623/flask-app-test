@@ -3,9 +3,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      # args:
-      #     COMMIT_HASH: ${COMMIT_HASH:-latest}
-    image: my-test-image
+      args:
+          COMMIT_HASH: ${COMMIT_HASH:-latest}
+    image: my-test-image:${COMMIT_HASH:-latest}
     ports:
       - "5555:5555"
     volumes:
