@@ -24,9 +24,9 @@ jobs:
         chmod 600 ~/.ssh/test_keys
         ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-    - name: Get Commit Hash
-      id: get_commit_hash
-      run: echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+    # - name: Get Commit Hash
+    #   id: get_commit_hash
+    #   run: echo "commit_hash=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
 
     - name: Check if requirements or Dockerfile changed
       id: check_changes
@@ -70,7 +70,8 @@ jobs:
             docker images --filter "dangling=true" -q | xargs -r docker rmi -f
             
             # Build new image
-            docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
+            # docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
+            docker-compose build  app
           else
             # If no rebuild needed, just restart the containers
             echo "Stopping containers..."
