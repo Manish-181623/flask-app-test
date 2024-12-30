@@ -24,9 +24,24 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           eval "$(ssh-agent -s)"
           ssh-add ~/.ssh/deploy_key
-          echo "Scanning Keys"
-          ssh-keyscan -H "${{ secrets.POLLEN_HOST }}" >> ~/.ssh/known_hosts
+          
+      - name: Add known hosts
+        run: |
+          # Debug: Check if secret is available (will show as masked if present)
+          echo "Attempting to scan host: ${{ secrets.POLLEN_HOST }}"
+          
+          # Create .ssh directory if it doesn't exist
+          mkdir -p ~/.ssh
+          
+          # Run keyscan with verbose flag
+          ssh-keyscan -v -H "${{ secrets.POLLEN_HOST }}" 2>&1 | tee -a ~/.ssh/known_hosts
+          
+          # Set permissions
           chmod 644 ~/.ssh/known_hosts
+          
+          # Verify the known_hosts file exists and has content
+          ls -la ~/.ssh/known_hosts
+          wc -l ~/.ssh/known_hosts
 
       - name: Deploy to Server
         env:
