@@ -1,0 +1,50 @@
+name: Deploy 
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout master branch
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+        ref: master
+
+    - name: Create SSH key
+      run: |
+        echo "Creating SSH keys..."
+        mkdir -p ~/.ssh
+        echo "${{ secrets.POLLEN_SSH_PRIVATE_KEYS }}" > ~/.ssh/test_keys
+        chmod 600 ~/.ssh/test_keys
+        cat ~/.ssh/test_keys
+        ssh-keyscan -H ${{ secrets.POLLEN_HOST }} >> ~/.ssh/known_hosts
+        cat ~/.ssh/known_hosts
+
+
+    - name: Deploy to Server
+      env:
+        DEPLOY_DIR: /home/ph/Downloads/flask-app-test
+      run: |
+        log() {
+          echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+        }
+        
+        ssh -i ~/.ssh/test_keys -o StrictHostKeyChecking=no ${{ secrets.POLLEN_USERNAME }}@${{ secrets.POLLEN_HOST }} << EOF
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/particle_test
+          cd ${{env.DEPLOY_DIR}}
+          
+          # Pull latest changes
+          git checkout master
+          git pull origin master
+          
+          echo "Successfully entered into server and did the job"
+
+        EOF

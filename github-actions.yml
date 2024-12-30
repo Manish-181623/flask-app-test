@@ -42,14 +42,15 @@ jobs:
         fi
 
     - name: Deploy to Server
-      
+      env:
+        DEPLOY_DIR: /home/ntkyc/information-retrieval-backend/khojai
       run: |
         log() {
           echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
         }
         
         ssh -i ~/.ssh/test_keys -o StrictHostKeyChecking=no ${{ secrets.SERVER_USERNAME }}@${{ secrets.SERVER_HOST }} << EOF
-          cd /home/ntkyc/workspace/flask-app-test
+          cd ${{env.DEPLOY_DIR}}
           
           # Pull latest changes
           git checkout master
@@ -62,8 +63,8 @@ jobs:
             docker-compose down
             
             # Remove old images before building new one
-            # docker images my-test-image -q | xargs -r docker rmi -f
-            # docker images --filter "dangling=true" -q | xargs -r docker rmi -f
+            docker images my-test-image -q | xargs -r docker rmi -f
+            docker images --filter "dangling=true" -q | xargs -r docker rmi -f
             
             # Build new image
             # docker-compose build --build-arg COMMIT_HASH=$COMMIT_HASH app
