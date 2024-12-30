@@ -24,9 +24,7 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           eval "$(ssh-agent -s)"
           ssh-add ~/.ssh/deploy_key
-          
-      - name: Add known hosts
-        run: |
+          echo "Scanning Keys"
           ssh-keyscan -H "${{ secrets.POLLEN_HOST }}" >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
