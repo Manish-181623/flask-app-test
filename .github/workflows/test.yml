@@ -47,6 +47,7 @@ jobs:
             ssh-add ~/.ssh/id_rsa
             cd $DEPLOY_DIR
             git checkout master
-            git pull origin master
+            git pull origin --rebase
+            git branch
             echo "Successfully entered into server and did the job"
           EOF
