@@ -34,7 +34,7 @@ jobs:
 
       - name: Add known hosts
         run: |
-          ssh-keyscan -H ${{ secrets.SSH_PC } >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.SSH_PC }} >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
       - name: Deploy to Server
@@ -42,7 +42,7 @@ jobs:
           DEPLOY_DIR: /home/ilab/Manish/flask-app-test
           # SSH_AUTH_SOCK: /tmp/ssh-auth.sock
         run: |
-          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.POLLEN_USERNAME }}@${{ secrets.SSH_PC } << 'EOF'
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.POLLEN_USERNAME }}@${{ secrets.SSH_PC }} << 'EOF'
             eval "$(ssh-agent -s)"
             ssh-add ~/.ssh/id_rsa
             cd $DEPLOY_DIR
