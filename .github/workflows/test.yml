@@ -32,8 +32,7 @@ jobs:
           eval "$(ssh-agent -s)"
           ssh-add ~/.ssh/deploy_key
 
-      - name: Add known hosts
-        run: |
+
           ssh-keyscan -H ${{ secrets.SSH_PC }} >> ~/.ssh/known_hosts
           chmod 644 ~/.ssh/known_hosts
 
