@@ -29,8 +29,8 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.POLLEN_SSH_PRIVATE_KEYS }}" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          eval "$(ssh-agent -s)"
-          ssh-add ~/.ssh/deploy_key
+          # eval "$(ssh-agent -s)"
+          # ssh-add ~/.ssh/deploy_key
 
       - name: Add known hosts
         run: |
