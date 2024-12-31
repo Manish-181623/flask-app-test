@@ -45,7 +45,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no ${{ secrets.POLLEN_USERNAME }}@${{ secrets.SSH_PC }} << 'EOF'
             eval "$(ssh-agent -s)"
             ssh-add ~/.ssh/id_rsa
-            cd $DEPLOY_DIR
+            cd ${{env.DEPLOY_DIR}}
             pwd
             git status
             git pull origin master --rebase
