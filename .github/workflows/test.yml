@@ -46,8 +46,8 @@ jobs:
             eval "$(ssh-agent -s)"
             ssh-add ~/.ssh/id_rsa
             cd $DEPLOY_DIR
-            git checkout master
-            git pull origin --rebase
-            git branch
+            pwd
+            git status
+            git pull origin master --rebase
             echo "Successfully entered into server and did the job"
           EOF
